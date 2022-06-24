@@ -1,9 +1,32 @@
 [package]
-name = "fastdns"
+name = "zzdns"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[build]
+jobs = 8                      # 并行构建任务的数量，默认等于 CPU 的核心数
+rustc = "rustc"               # rust 编译器
+rustc-wrapper = "…"           # 使用该 wrapper 来替代 rustc
+rustc-workspace-wrapper = "…" # 为工作空间的成员使用 该 wrapper 来替代 rustc
+rustdoc = "rustdoc"           # 文档生成工具
+target = "triple"             # 为 target triple 构建 ( `cargo install` 会忽略该选项)
+target-dir = "target"         # 存放编译输出结果的目录
+rustflags = ["…", "…"]        # 自定义flags，会传递给所有的编译器命令调用
+rustdocflags = ["…", "…"]     # 自定义flags，传递给 rustdoc
+incremental = true            # 是否开启增量编译
+dep-info-basedir = "…"        # path for the base directory for targets in depfiles
+pipelining = true             # rustc pipelining
 
 [dependencies]
-tokio = {version="1", features=["full"]}
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "net", "fs", "signal", "time"] }
+domain = {version = "^0.6", features = ["bytes"]}
+bytes = {version="1.1.0"}
+anyhow = {version="1.0.58"}
+thiserror = {version="1.0.31"}
+lazy_static = {version="1.4.0"}
+serde = {version="1.0.138", features = ["derive"]}
+serde_json = {version="1.0.82"}
+log = {version="0.4.17"}
+pretty_env_logger = {version="0.4.0"}
+rand = {version="0.8.1"}
+stretto = { version = "0.5.1", features = ["async"] }

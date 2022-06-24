@@ -1,0 +1,13 @@
+{
+    "port": 3053,
+    "server": [
+        "119.29.29.29",
+        "1.1.1.1",
+        "8.8.8.8",
+        "114.114.114.114"
+    ],
+    "cache_max_size": 40960,
+    "preload_domain_count": 128,
+    "cache_max_ttl": 120,
+    "preload_domain_file": "config/domain.txt"
+}
