@@ -19,30 +19,28 @@ impl Cacher {
         let header = rmsg.header_mut();
         header.set_ra(true);
         let mut ttl = u32::MAX;
-        for item in ans {
+        for rr in ans.flatten() {
             
-            if let Ok(rr) = item {
-                if rr.ttl() < ttl {
-                    ttl = rr.ttl();
-                }
-                if rr.rtype()  !=  domain::base::Rtype::A && rr.rtype() != domain::base::Rtype::Cname {
-                    continue;
-                }
-                if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::A>() {
-                    if !record.is_none() {
-                        let record = record.unwrap();
-                        rmsg.push(record).unwrap();
-                    }
-                }
-                if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::Cname<_>>() {
-                    if record.is_none() {
-                        continue;
-                    }
+            if rr.ttl() < ttl {
+                ttl = rr.ttl();
+            }
+            if rr.rtype()  !=  domain::base::Rtype::A && rr.rtype() != domain::base::Rtype::Cname {
+                continue;
+            }
+            if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::A>() {
+                if record.is_some() {
                     let record = record.unwrap();
                     rmsg.push(record).unwrap();
-                    
                 }
-            };
+            }
+            if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::Cname<_>>() {
+                if record.is_none() {
+                    continue;
+                }
+                let record = record.unwrap();
+                rmsg.push(record).unwrap();
+                
+            }
         }
 
         let flag = cache.insert_with_ttl(qname.to_string(), rmsg.into_message().as_octets().clone(),1 , Duration::from_secs(ttl.into())).await;
@@ -60,7 +58,7 @@ impl Cacher {
 
             let mut bytes = BytesMut::with_capacity(1024);
             bytes.resize(buf.len(), 0);
-            bytes.copy_from_slice(&buf);
+            bytes.copy_from_slice(buf);
 
             let id:u16 = qmsg.header().id();
 

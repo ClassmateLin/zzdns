@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use domain::base::{iana::Rcode, question};
+use domain::base::{iana::Rcode};
 use bytes::{Bytes, BytesMut};
 use domain::base::{Message, MessageBuilder, Question};
 use anyhow::{Result};
@@ -24,38 +24,35 @@ impl Resolver {
         header.set_ra(true);
 
         // 有缓存则返回返回结果
-        if let Ok(result) = Cacher::get_response_msg(qmsg.clone(), cache.clone()){
-            if let Some((rmsg, ttl)) = result {
-                let qmsg2 = qmsg.clone();
+        if let Ok(Some((rmsg, ttl))) = Cacher::get_response_msg(qmsg.clone(), cache.clone()){
+            let qmsg2 = qmsg.clone();
                 let (_, answer, _, _) = rmsg.sections().unwrap();
                 let mut rmsg = MessageBuilder::from_target(BytesMut::with_capacity(1024))?
                     .start_answer(&qmsg2, Rcode::NoError).unwrap();
                 
                 // 更新Msg的缓存为剩余的ttl.
-                for item in answer {
+                for rr in answer.flatten() {
             
-                    if let Ok(rr) = item {
-                        if rr.rtype()  !=  domain::base::Rtype::A && rr.rtype() != domain::base::Rtype::Cname {
-                                continue;
-                            }
-                            
-                        if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::A>() {
-                            if !record.is_none() {
-                                let mut record = record.unwrap();
-                                record.set_ttl(ttl as u32);
-                                rmsg.push(record).unwrap();
-                            }
-                        }
-                        if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::Cname<_>>() {
-                            if record.is_none() {
-                                continue;
-                            }
-                            let mut record = record.unwrap();
-                            record.set_ttl(ttl as u32);
-                            rmsg.push(record).unwrap();
-                                
-                        }
-                    };
+                    if rr.rtype()  !=  domain::base::Rtype::A && rr.rtype() != domain::base::Rtype::Cname {
+                        continue;
+                    }
+                    
+                if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::A>() {
+                    if record.is_some() {
+                        let mut record = record.unwrap();
+                        record.set_ttl(ttl as u32);
+                        rmsg.push(record).unwrap();
+                    }
+                }
+                if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::Cname<_>>() {
+                    if record.is_none() {
+                        continue;
+                    }
+                    let mut record = record.unwrap();
+                    record.set_ttl(ttl as u32);
+                    rmsg.push(record).unwrap();
+                        
+                }
                 }    
                 if ttl < 10 { // 重新缓存
                     tokio::spawn(async move {
@@ -67,7 +64,6 @@ impl Resolver {
                     return Ok(rmsg.into_message());
                 }
                 return Ok(rmsg.into_message());
-            };
         };
 
         let req_up_msg = MessageBuilder::from_target(BytesMut::with_capacity(1024))?;
@@ -81,31 +77,28 @@ impl Resolver {
 
         
         let mut has_a = false;
-        for item in ans {
+        for rr in ans.flatten() {
+            if rr.rtype()  !=  domain::base::Rtype::A && rr.rtype() != domain::base::Rtype::Cname {
+                continue;
+            }
             
-            if let Ok(rr) = item {
-                if rr.rtype()  !=  domain::base::Rtype::A && rr.rtype() != domain::base::Rtype::Cname {
-                    continue;
-                }
-                
-                if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::A>() {
-                    if !record.is_none() {
-                        let mut record = record.unwrap();
-                        record.set_ttl(5);
-                        rmsg.push(record).unwrap();
-                        has_a = true;
-                    }
-                }
-                if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::Cname<_>>() {
-                    if record.is_none() {
-                        continue;
-                    }
+            if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::A>() {
+                if record.is_some() {
                     let mut record = record.unwrap();
                     record.set_ttl(5);
                     rmsg.push(record).unwrap();
-                    
+                    has_a = true;
                 }
-            };
+            }
+            if let Ok(record) = rr.to_record::<domain::rdata::rfc1035::Cname<_>>() {
+                if record.is_none() {
+                    continue;
+                }
+                let mut record = record.unwrap();
+                record.set_ttl(5);
+                rmsg.push(record).unwrap();
+                
+            }
         }
         if has_a {
             let rmsg = rmsg.clone().into_message();

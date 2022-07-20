@@ -17,7 +17,7 @@ async fn handle(msg_sender: Arc<mpsc::Sender<(Message<Bytes>, Message<Bytes>)>>)
             break;
         }
 
-        let qname = Dname::bytes_from_str(&q_name).unwrap();
+        let qname = Dname::bytes_from_str(q_name).unwrap();
         let qmsg_builder = MessageBuilder::from_target(BytesMut::with_capacity(1024))?;
         
         let mut question_builder = qmsg_builder.question();

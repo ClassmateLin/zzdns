@@ -5,7 +5,6 @@ use std::path::PathBuf;
 use std::fs;
 use std::env;
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 const CONFIG_FILE: &str = "config/config.json";
 

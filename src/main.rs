@@ -1,5 +1,4 @@
 use anyhow::Result;
-use pretty_env_logger;
 use zzdns::init_servers;
 
 
